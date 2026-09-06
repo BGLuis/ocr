@@ -14,14 +14,30 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 
-/// Default Unix socket path: `$XDG_RUNTIME_DIR/ocrd.sock`, falling back to
-/// `/tmp/ocrd-<uid>.sock` when the runtime dir is not set.
+/// Default Unix socket path.
+///
+/// Prefers `$XDG_RUNTIME_DIR/ocrd.sock` — a per-user, mode-0700 directory on any
+/// systemd/Wayland session, which is the normal case here. Without it, falls
+/// back to a **per-user subdirectory** of the temp dir,
+/// `<tmpdir>/ocrd-<user>/ocrd.sock`, never a bare file in a shared `/tmp`.
+///
+/// The daemon ([`ocrd`]) is what makes this safe: it creates the fallback
+/// directory `0700`, refuses it if it already exists owned by another user, and
+/// chmods the socket itself to `0600`. So the predictable name cannot be
+/// squatted or connected to by other local users — which matters because the
+/// socket carries screen captures and their recognized text.
 pub fn default_socket_path() -> std::path::PathBuf {
     if let Some(dir) = std::env::var_os("XDG_RUNTIME_DIR") {
-        return std::path::Path::new(&dir).join("ocrd.sock");
+        if !dir.is_empty() {
+            return std::path::Path::new(&dir).join("ocrd.sock");
+        }
     }
-    let uid = std::env::var("UID").unwrap_or_else(|_| "0".to_string());
-    std::path::PathBuf::from(format!("/tmp/ocrd-{uid}.sock"))
+    let who = std::env::var("USER")
+        .or_else(|_| std::env::var("LOGNAME"))
+        .unwrap_or_else(|_| "user".to_string());
+    std::env::temp_dir()
+        .join(format!("ocrd-{who}"))
+        .join("ocrd.sock")
 }
 
 /// Recognizer selection. Several human-friendly spellings collapse onto the

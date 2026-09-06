@@ -16,13 +16,25 @@
 
 set -eu
 
-sock="${OCRD_SOCKET:-${XDG_RUNTIME_DIR:-/tmp}/ocrd.sock}"
+# Fallback mirrors ocr-proto::default_socket_path: a per-user subdirectory,
+# never a bare file in a shared /tmp. The daemon locks it down (0700 dir,
+# 0600 socket).
+if [ -n "${OCRD_SOCKET:-}" ]; then
+    sock="$OCRD_SOCKET"
+elif [ -n "${XDG_RUNTIME_DIR:-}" ]; then
+    sock="$XDG_RUNTIME_DIR/ocrd.sock"
+else
+    sock="${TMPDIR:-/tmp}/ocrd-$(id -un)/ocrd.sock"
+fi
 accel="${OCRD_ACCEL:-auto}"
 ocrd_bin="${OCRD_BIN:-ocrd}"
 client_bin="${OCRD_CLIENT:-ocrd-client}"
 
 if ! "$client_bin" --socket "$sock" --ping >/dev/null 2>&1; then
-    rm -f "$sock" 2>/dev/null || true          # clear a stale socket file
+    # Remove only a stale socket we own; the daemon re-checks this too.
+    if [ -e "$sock" ] && [ -O "$sock" ]; then
+        rm -f "$sock" 2>/dev/null || true
+    fi
     setsid "$ocrd_bin" --accel "$accel" --socket "$sock" >/dev/null 2>&1 &
     i=0
     until "$client_bin" --socket "$sock" --ping >/dev/null 2>&1; do
