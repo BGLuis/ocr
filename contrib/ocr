@@ -1,0 +1,35 @@
+#!/usr/bin/env sh
+# ocr — one-shot wrapper around ocrd + ocrd-client for use in scripts.
+#
+# Starts the ocrd daemon on first use (and leaves it running, warm, for the
+# next call), then forwards every argument to ocrd-client.
+#
+#   ocr --file shot.png                        # text to stdout
+#   grim -g "$(slurp)" - | ocr --lang latin | wl-copy
+#   ocr --file page.png --json | jq -r '.lines[].text'
+#
+# Env overrides:
+#   OCRD_SOCKET   socket path         (default: $XDG_RUNTIME_DIR/ocrd.sock)
+#   OCRD_ACCEL    auto | cpu | cuda   (default: auto)
+#   OCRD_BIN      path to ocrd        (default: found on PATH)
+#   OCRD_CLIENT   path to ocrd-client (default: found on PATH)
+
+set -eu
+
+sock="${OCRD_SOCKET:-${XDG_RUNTIME_DIR:-/tmp}/ocrd.sock}"
+accel="${OCRD_ACCEL:-auto}"
+ocrd_bin="${OCRD_BIN:-ocrd}"
+client_bin="${OCRD_CLIENT:-ocrd-client}"
+
+if ! "$client_bin" --socket "$sock" --ping >/dev/null 2>&1; then
+    rm -f "$sock" 2>/dev/null || true          # clear a stale socket file
+    setsid "$ocrd_bin" --accel "$accel" --socket "$sock" >/dev/null 2>&1 &
+    i=0
+    until "$client_bin" --socket "$sock" --ping >/dev/null 2>&1; do
+        i=$((i + 1))
+        [ "$i" -gt 300 ] && { echo "ocr: ocrd did not come up within 30s" >&2; exit 1; }
+        sleep 0.1
+    done
+fi
+
+exec "$client_bin" --socket "$sock" "$@"

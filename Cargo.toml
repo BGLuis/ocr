@@ -1,0 +1,39 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/ocr-proto",
+    "crates/ocr-core",
+    "crates/ocrd",
+    "crates/ocrd-client",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.95"
+license = "Apache-2.0"
+repository = "https://github.com/luishenrique/ocr"
+
+[workspace.dependencies]
+# Pinned exactly: `ort` has never had a stable release and its API changes
+# between rc builds (report section 4). All `ort` use is confined to ocr-core.
+ort = { version = "=2.0.0-rc.13", default-features = false, features = ["std", "ndarray", "tracing", "copy-dylibs"] }
+oar-ocr = { version = "=0.9.2", default-features = false }
+
+anyhow = "1"
+thiserror = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+base64 = "0.22"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "bmp"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+clap = { version = "4", features = ["derive"] }
+
+ocr-proto = { path = "crates/ocr-proto" }
+ocr-core = { path = "crates/ocr-core" }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true

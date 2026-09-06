@@ -1,0 +1,29 @@
+# systemd --user unit for the resident OCR daemon.
+#
+#   mkdir -p ~/.config/systemd/user
+#   cp contrib/ocrd.service ~/.config/systemd/user/
+#   cargo install --path crates/ocrd          # puts `ocrd` on PATH
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now ocrd
+#
+# Logs:  journalctl --user -u ocrd -f
+
+[Unit]
+Description=Resident multilingual OCR daemon (PP-OCRv5 via oar-ocr)
+Documentation=file:%h/Documents/hand-on/OCR/README.md
+After=graphical-session.target
+
+[Service]
+Type=simple
+# --accel auto probes CUDA and falls back to CPU with a logged reason.
+# Use --accel cpu to pin CPU, or --accel cuda to require the GPU (see report 2.9).
+ExecStart=%h/.cargo/bin/ocrd --accel auto
+Environment=RUST_LOG=ocrd=info,ocr_core=info
+# Model cache location (oar-ocr default is ~/.oar).
+Environment=OAR_HOME=%h/.oar
+Restart=on-failure
+RestartSec=2
+# The socket lives in $XDG_RUNTIME_DIR; nothing to clean on stop.
+
+[Install]
+WantedBy=graphical-session.target

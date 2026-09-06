@@ -1,0 +1,31 @@
+[package]
+name = "ocr-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Isolation boundary around oar-ocr: one detector, three PP-OCRv5 recognizers, recognize() -> Vec<TextLine>"
+
+[features]
+# CPU is the baseline (report 2.9). `download-binaries` lets `ort` fetch a
+# matching ONNX Runtime; `auto-download` lets oar-ocr fetch the ONNX models by
+# registered name. `cuda` additionally pulls the ORT CUDA execution provider —
+# the daemon still probes at runtime before trusting it.
+default = ["download-binaries", "auto-download"]
+download-binaries = ["oar-ocr/download-binaries"]
+auto-download = ["oar-ocr/auto-download"]
+cuda = ["oar-ocr/cuda", "ort/cuda"]
+
+[dependencies]
+ocr-proto.workspace = true
+oar-ocr.workspace = true
+ort.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+image.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tracing-subscriber.workspace = true

@@ -1,0 +1,29 @@
+[package]
+name = "ocrd"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Resident OCR daemon: models stay hot, a Unix socket answers ocrd-client"
+
+[[bin]]
+name = "ocrd"
+path = "src/main.rs"
+
+[features]
+# Forwarded to ocr-core. `cuda` also needs a matching ONNX Runtime + cuDNN 9
+# on the host (report section 4); the daemon probes before trusting it.
+default = ["download-binaries", "auto-download"]
+download-binaries = ["ocr-core/download-binaries"]
+auto-download = ["ocr-core/auto-download"]
+cuda = ["ocr-core/cuda"]
+
+[dependencies]
+ocr-core.workspace = true
+ocr-proto.workspace = true
+clap.workspace = true
+serde_json.workspace = true
+base64.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true

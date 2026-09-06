@@ -1,0 +1,11 @@
+[package]
+name = "ocr-proto"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Wire protocol shared by ocrd and ocrd-client (newline-delimited JSON over a Unix socket)"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true

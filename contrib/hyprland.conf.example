@@ -1,0 +1,26 @@
+# OCR-on-a-keystroke for Hyprland (report section 2.7).
+#
+# Requires: grim, slurp, wl-clipboard  (all already present on this machine),
+# the `ocrd` daemon running (see contrib/ocrd.service), and `ocrd-client` on PATH
+# (`cargo install --path crates/ocrd-client`).
+#
+# Add these lines to ~/.config/hypr/hyprland.conf (or a sourced file).
+
+# Select a region, OCR it (auto language), copy the text to the clipboard.
+bind = SUPER SHIFT, T, exec, grim -g "$(slurp)" - | ocrd-client --lang auto | wl-copy
+
+# Same, but force the Latin recognizer — faster and more correct when you
+# already know you're looking at Portuguese/Spanish/French/German.
+bind = SUPER SHIFT ALT, T, exec, grim -g "$(slurp)" - | ocrd-client --lang latin | wl-copy
+
+# Force Japanese/Chinese/English (the CJK recognizer).
+bind = SUPER SHIFT, J, exec, grim -g "$(slurp)" - | ocrd-client --lang cjk | wl-copy
+
+# Force Korean.
+bind = SUPER SHIFT, K, exec, grim -g "$(slurp)" - | ocrd-client --lang korean | wl-copy
+
+# OCR the whole focused output instead of a hand-drawn region.
+bind = SUPER SHIFT CTRL, T, exec, grim -o "$(hyprctl activeworkspace -j | jq -r .monitor)" - | ocrd-client --lang auto | wl-copy
+
+# Optional: notify when the text has landed on the clipboard.
+# bind = SUPER SHIFT, T, exec, grim -g "$(slurp)" - | ocrd-client --lang auto | wl-copy && notify-send "OCR" "copied to clipboard"
