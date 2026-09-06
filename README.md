@@ -1,187 +1,189 @@
-# ocr — multilingual OCR on a keystroke
+<div align="center">
 
-Local, offline OCR for daily use: select a region, get its text on the clipboard.
-Latin (Portuguese/Spanish/French/German), Japanese, Chinese and Korean, from one
-resident daemon. No Python at runtime, no cloud.
+<!-- Badges de Status do GitHub -->
+![GitHub Stars](https://www.shieldcn.dev/github/stars/luishenrique/ocr.svg?variant=secondary&size=sm)
+![GitHub Forks](https://www.shieldcn.dev/github/forks/luishenrique/ocr.svg?variant=secondary&size=sm)
+![Watchers](https://www.shieldcn.dev/github/watchers/luishenrique/ocr.svg?variant=secondary&size=sm)
+![Contributors](https://www.shieldcn.dev/github/contributors/luishenrique/ocr.svg?theme=emerald&size=sm)
+![License](https://www.shieldcn.dev/github/license/luishenrique/ocr.svg?variant=ghost&size=sm)
 
-Design rationale and the alternatives that were rejected:
+<br/>
+
+<!-- Badges das Tecnologias Utilizadas -->
+![Rust](https://www.shieldcn.dev/badge/Rust-1.95%2B-000000.svg?logo=rust&variant=branded&size=sm)
+![ONNX Runtime](https://www.shieldcn.dev/badge/ONNX_Runtime-static-005CED.svg?logo=onnx&variant=branded&size=sm)
+![Linux](https://www.shieldcn.dev/badge/Linux-Wayland-FCC624.svg?logo=linux&variant=branded&size=sm)
+
+  <h3>ocr</h3>
+  OCR multilíngue, local e offline: selecione uma região da tela e o texto vai para a área de transferência.
+</div>
+
+<p align="center">
+  <b>Português (Brasil)</b> &nbsp;·&nbsp; <a href="README.en.md">English</a>
+</p>
+
+# 📖 Sobre
+
+`ocr` é uma ferramenta de reconhecimento óptico de caracteres para uso diário no
+desktop Linux/Wayland. Um **daemon residente** (`ocrd`) mantém os modelos
+carregados na memória e um **cliente minúsculo** (`ocrd-client`) envia uma imagem
+por um socket Unix e imprime o texto reconhecido. O caso de uso central é um
+atalho de teclado: recorte uma parte da tela, o texto aparece na área de
+transferência.
+
+Por baixo:
+
+- **Rust puro em runtime** — nenhum Python, nenhuma chamada de rede. É um
+  *workspace* Cargo com quatro *crates*: `ocr-proto` (tipos do protocolo),
+  `ocr-core` (única fronteira que toca em `oar-ocr`/`ort`), `ocrd` (daemon) e
+  `ocrd-client` (cliente).
+- **Modelos PP-OCRv5** servidos via [`oar-ocr`](https://crates.io/crates/oar-ocr)
+  sobre o [ONNX Runtime](https://onnxruntime.ai/), que é **linkado
+  estaticamente** — os binários instalados rodam de qualquer lugar sem `.so`
+  vizinho.
+- **Um detector + três reconhecedores** residentes (~41 MiB): CJK (japonês,
+  chinês, inglês), coreano e latino (português, espanhol, francês, alemão).
+- **Idioma automático com *fallback* por confiança** — em `--lang auto`, o
+  reconhecedor CJK roda em todas as caixas; as caixas de baixa confiança
+  (< 0.6) são repassadas aos reconhecedores coreano e latino, e o melhor
+  resultado vence.
+- **CPU por padrão.** Aceleração por GPU é opção explícita via
+  `--accel auto|cpu|cuda|openvino|webgpu|directml`, sempre sondada antes de ser
+  usada e fatal se indisponível (sem *fallback* silencioso).
+- **Integração com Wayland**: `grim` + `slurp` + `wl-clipboard`, *binds* de
+  Hyprland e uma *unit* `systemd --user` prontas em `contrib/`.
+
+O racional de projeto e as alternativas descartadas estão em
 [`docs/reports/OCR-MULTILINGUE-ANALISE-DE-VIABILIDADE.md`](docs/reports/OCR-MULTILINGUE-ANALISE-DE-VIABILIDADE.md).
 
-## Status
+# 📋 Motivo
 
-| Phase | What | State |
-|---|---|---|
-| F0 | Spike: fetch models, run on the four test images, compare to Tesseract | ✅ done — see *Verification* below |
-| F1 | `ocr-core`: `recognize(image, lang) -> Vec<TextLine>`, 1 detector + 3 recognizers, confidence fallback, `--accel` | ✅ done |
-| F2 | `ocrd-client`: image on stdin → text on stdout; Hyprland bind | ✅ done |
-| F3 | `ocrd`: Unix socket, resident models, systemd unit | ✅ done (single-connection serial; no signal cleanup yet) |
-| F4 | Script auto-detection tuning, box merging, forced-language shortcuts | ⬜ partial (forced language works; box merging pending) |
-| F5 | `manga-ocr` autoregressive decode | ⬜ not started |
-| F6 | Video: ffmpeg → SSIM dedup → OCR → `.srt` | ⬜ not started |
-| F7 | GUI | ⬜ not started |
+Criei este projeto para remover um bloqueio pessoal: não conseguir ter — nem
+fazer — um OCR local que realmente prestasse. E, junto disso, para reconstruir
+uma função de que eu gostava e usava bastante no PowerToys, agora no meu próprio
+ambiente Linux/Wayland.
 
-## Architecture
+# 💻 Como iniciar
 
-```
-grim -g "$(slurp)" -  │  ocrd-client  ──JSON over $XDG_RUNTIME_DIR/ocrd.sock──▶  ocrd
-    (PNG on stdin)     │  (tiny, serde  │                                          │
-                       │   only)        │                       ┌──────────────────┴─────────────┐
-                       │                │                       │ ocr-core (isolates oar-ocr/ort)│
-   text on stdout  ◀───┤  ◀──JSON───────┘                       │  pp-ocrv5_mobile_det (shared)  │
-    │                                                           │  ├ cjk   rec  (ja/zh/en)        │
-   wl-copy                                                      │  ├ korean rec                  │
-                                                                │  └ latin rec (pt/es/fr/de)     │
-                                                                └────────────────────────────────┘
-```
+### Requisitos
 
-- **`ocr-proto`** — the wire types. Depends on `serde` only, so the client stays small.
-- **`ocr-core`** — the only crate that names `oar-ocr` or `ort` (report §4). One
-  language-agnostic detector, three PP-OCRv5 recognizers, all resident (~41 MiB).
-  Under `Lang::Auto` it runs the CJK recognizer on every box, then re-runs only
-  the low-confidence boxes through Korean and Latin and keeps the best (report §2.4).
-- **`ocrd`** — loads `ocr-core` once, answers one request per connection.
-- **`ocrd-client`** — reads an image, prints the text.
+- [Rust](https://www.rust-lang.org/tools/install) 1.95+ (edição 2021; a máquina
+  de referência usa 1.97).
+- Conexão à internet **na primeira compilação** (o `ort` baixa o ONNX Runtime) e
+  no primeiro `ocrd --warm` (~41 MiB de modelos PP-OCRv5, gravados em `~/.oar`).
+- Para o fluxo "print → OCR → área de transferência" no Wayland:
+  [grim](https://sr.ht/~emersion/grim/),
+  [slurp](https://github.com/emersion/slurp),
+  [wl-clipboard](https://github.com/bugaevc/wl-clipboard).
+- Opcional — GPU: NVIDIA com [cuDNN 9](https://developer.nvidia.com/cudnn) para
+  `--features cuda`. Intel (`openvino`) e Windows (`directml`) exigem um ONNX
+  Runtime de sistema — ver a tabela de aceleração no fim desta seção.
 
-## Install
+### Instalação
+
+1. Clone o repositório do projeto:
+  ```sh
+  git clone https://github.com/luishenrique/ocr.git
+  ```
+
+2. Navegue até o diretório do projeto:
+  ```sh
+  cd ocr
+  ```
+
+3. Escolha **um** dos métodos abaixo.
+
+#### Método 1 — `cargo install` (recomendado)
+
+Instala os dois binários em `~/.cargo/bin` e baixa os modelos uma vez:
 
 ```sh
-cargo install --path crates/ocrd          # -> ~/.cargo/bin/ocrd        (self-contained, ~29 MiB)
+cargo install --path crates/ocrd          # -> ~/.cargo/bin/ocrd        (~29 MiB)
 cargo install --path crates/ocrd-client   # -> ~/.cargo/bin/ocrd-client (~1 MiB)
-install -Dm755 contrib/ocr ~/.local/bin/ocr   # optional auto-start wrapper (see "Use in scripts")
-ocrd --warm                               # fetch models to ~/.oar (~41 MiB, one time)
+ocrd --warm                               # baixa os modelos para ~/.oar
+
+# opcional: wrapper que sobe o ocrd sob demanda, sem systemd
+install -Dm755 contrib/ocr ~/.local/bin/ocr
 ```
 
-ONNX Runtime is statically linked via the `ort` `download-binaries` feature at
-build time — the installed binaries need no sibling `.so` and run from anywhere.
-CPU is the default and needs nothing else.
-
-### GPU (optional)
-
-`--accel` accepts `auto | cpu | cuda | openvino | webgpu | directml`. `auto`
-tries CUDA then CPU and **never** silently picks a vendor backend; the rest
-*require* their provider and fail loudly if it is missing (report §4). Every one
-is probed before it is trusted.
-
-For a single screenshot the CPU path is already fast enough (~30–130 ms warm
-here); GPU only pays off for batch flows (video, PDF — F6). So none of this is on
-the default path.
-
-| Vendor | Flag | Build | Reality with the prebuilt ONNX Runtime |
-|---|---|---|---|
-| **NVIDIA** | `--accel cuda` | `--features cuda` | Works, given cuDNN 9 + `libcudart.so.12` on the host. This machine has CUDA 13.x and no cuDNN, so the probe refuses and `auto` stays on CPU until `pacman -S cudnn` (and a CUDA-12 runtime). |
-| **Intel** iGPU / Arc / NPU | `--accel openvino` | `--features openvino` | **Does not link** with the downloaded ORT — pyke's prebuilt binaries omit OpenVINO. Needs a system ONNX Runtime built with it: `ORT_STRATEGY=system ORT_LIB_LOCATION=/path/to/onnxruntime cargo build --features openvino`. Then `--accel openvino` targets `GPU` (override with `OCRD_OPENVINO_DEVICE`). |
-| **AMD** on Linux | `--accel webgpu` | *(no feature flag)* | ROCm is not exposed by the pipeline library, and `ort/webgpu` makes the binary depend on `libwebgpu_dawn.so`, which the prebuilt ORT does not ship — enabling it breaks the daemon at load. Needs ONNX Runtime built from source with WebGPU/Dawn, linked via `ORT_STRATEGY=system`. Until then `--accel webgpu` returns a clean fatal error. |
-| **Windows**, any GPU | `--accel directml` | `--features directml` | Same as OpenVINO: needs a system ORT with the DirectML EP. Windows-only; on Linux the probe rejects it. |
-
-See <https://ort.pyke.io/setup/linking> for building/linking a system ONNX
-Runtime. The daemon and client code already speak every one of these flags — the
-only gap is the ORT binary.
-
-## Run
+#### Método 2 — compilar a partir do código-fonte
 
 ```sh
-# terminal / systemd
-ocrd --accel auto        # auto|cpu|cuda|openvino|webgpu|directml
+cargo build --release                     # LTO, binários em ./target/release
+cargo run -p ocrd -- --warm               # baixa os modelos
+./target/release/ocrd --accel auto        # sobe o daemon
+```
 
-# one-shot
+Para GPU, adicione a *feature* correspondente ao construir o `ocrd`:
+`cargo build --release -p ocrd --features cuda` (ou `openvino` / `directml`).
+
+### Como usar
+
+```sh
+# 1. Deixe o daemon rodando (terminal ou systemd)
+ocrd --accel auto
+
+# 2. Em qualquer lugar: recorte a tela, reconheça, copie
 grim -g "$(slurp)" - | ocrd-client --lang auto | wl-copy
+
+# Ou a partir de um arquivo, com a resposta JSON completa
 ocrd-client --file shot.png --lang latin --json
 ```
 
-Install the daemon and the Hyprland binds:
+Instalar o serviço e os atalhos do Hyprland:
 
 ```sh
 cp contrib/ocrd.service ~/.config/systemd/user/ && systemctl --user enable --now ocrd
 cat contrib/hyprland.conf.example >> ~/.config/hypr/hyprland.conf
 ```
 
-## Use in scripts
+Opções principais do `ocrd-client`:
 
-Two ways to get `ocr` on your PATH for other projects:
-
-**A. systemd user service (recommended for daily use).** The daemon stays warm;
-scripts just call `ocrd-client`:
-
-```sh
-cp contrib/ocrd.service ~/.config/systemd/user/
-systemctl --user enable --now ocrd
-
-# then, anywhere:
-ocrd-client --file page.png --lang latin
-grim -g "$(slurp)" - | ocrd-client --lang auto | wl-copy
-```
-
-**B. the `ocr` wrapper (no systemd needed).** `contrib/ocr` starts `ocrd` on the
-first call and reuses it after — good for portable scripts and non-Hyprland
-machines:
-
-```sh
-install -Dm755 contrib/ocr ~/.local/bin/ocr
-
-ocr --file screenshot.png                       # text on stdout
-ocr --file invoice.png --json | jq -r '.lines[].text'
-xclip -selection clipboard -t image/png -o | ocr --lang latin
-```
-
-Overridable via env: `OCRD_SOCKET`, `OCRD_ACCEL` (`auto|cpu|cuda|openvino|webgpu|directml`), `OCRD_BIN`,
-`OCRD_CLIENT`.
-
-`ocrd-client --ping` exits 0 iff the daemon is reachable — useful for your own
-health checks. First call after a boot pays the ~150–200 ms model load once;
-every call after that is ~30–130 ms warm.
-
-### `ocrd-client` options
-
-| Flag | Meaning |
+| Flag | Significado |
 |---|---|
-| `--lang` | `auto` (default), `cjk` / `ja` / `zh` / `en`, `korean` / `ko`, `latin` / `pt` / `es` / `fr` / `de` |
-| `--file PATH` | read image from a file instead of stdin |
-| `--json` | full response (lines, per-line confidence, bboxes, timing) |
-| `--verbose` | per-line confidence to stderr, text to stdout |
-| `--socket PATH` | override `$XDG_RUNTIME_DIR/ocrd.sock` |
-| `--ping` | exit 0 if ocrd is reachable, non-zero otherwise; reads no image |
+| `--lang` | `auto` (padrão), `cjk` / `ja` / `zh` / `en`, `korean` / `ko`, `latin` / `pt` / `es` / `fr` / `de` |
+| `--file PATH` | lê a imagem de um arquivo em vez do stdin |
+| `--json` | resposta completa (linhas, confiança por linha, *bboxes*, tempo) |
+| `--verbose` | confiança por linha no stderr, texto no stdout |
+| `--ping` | sai com 0 se o `ocrd` está acessível; não lê imagem |
 
-## Verification
+### Configuração por ambiente
 
-Unit + logic tests (no models needed):
+O projeto não usa `.env`; o comportamento é ajustado por estas variáveis:
+
+| Variável | Padrão | Função |
+|---|---|---|
+| `OCRD_SOCKET` | `$XDG_RUNTIME_DIR/ocrd.sock` | Caminho do socket Unix |
+| `OCRD_ACCEL` | `auto` | `auto\|cpu\|cuda\|openvino\|webgpu\|directml` |
+| `OAR_HOME` | `~/.oar` | Cache dos modelos ONNX |
+| `OCRD_BIN` / `OCRD_CLIENT` | achados no `PATH` | Binários usados pelo wrapper `contrib/ocr` |
+| `OCRD_OPENVINO_DEVICE` | `GPU` | Dispositivo alvo do OpenVINO |
+| `RUST_LOG` | `ocrd=info,ocr_core=info` | Verbosidade de log |
+| `OCR_REQUIRE_MODELS` | — | Se definida, os testes de reconhecimento falham (em vez de pular) quando os modelos faltam |
+
+### Testes
 
 ```sh
-cargo test
-```
+cargo test                                        # unitários + lógica, sem modelos
 
-Recognition tests against the real models (report §5 checklist). They skip if the
-models are absent unless `OCR_REQUIRE_MODELS=1`:
-
-```sh
-cargo run -p ocrd -- --warm
+cargo run -p ocrd -- --warm                       # baixa os modelos
 OCR_REQUIRE_MODELS=1 cargo test -p ocr-core --test recognition
 ```
 
-F0 measured on this machine (CPU, warm daemon), against the Tesseract baseline in
-report §1.4:
+### Aceleração por GPU
 
-| Image | Input | `ocrd --lang auto` | confidence | Tesseract (`-l eng`) |
-|---|---|---|---|---|
-| `en.png` | `The quick brown fox 2026` | `The quick brown fox 2026` | 96 % | `‘The quick brown fox 2026` |
-| `ja_h.png` | `吾輩は猫である。名前はまだ無い。` | `吾輩は猫である。` / `名前はまだ無い。` | 99 % | `EEIIETH D, BEITEIEEL,` |
-| `zh.png` | `人工智能技术发展` | `人工智能技术发展` | 99 % | `ANIEERALE` |
-| `ko.png` | `안녕하세요 세계` | `안녕하세요 세계` (korean, via fallback) | 98 % | `CHASIMR MIA` |
-| `pt_diacriticos.png` | `ação, você, pêssego, coração` | intact with `--lang latin` | 98 % | — |
+| Fornecedor | Flag | Build | Situação com o ONNX Runtime pré-compilado |
+|---|---|---|---|
+| **NVIDIA** | `--accel cuda` | `--features cuda` | Funciona, dado cuDNN 9 + `libcudart.so.12` no host. |
+| **Intel** (iGPU / Arc / NPU) | `--accel openvino` | `--features openvino` | Não linka com o ORT baixado; precisa de um ONNX Runtime de sistema com OpenVINO (`ORT_STRATEGY=system`). |
+| **AMD** no Linux | `--accel webgpu` | *(sem flag)* | Precisa de um ONNX Runtime compilado do zero com WebGPU/Dawn; até lá, erro limpo e fatal. |
+| **Windows**, qualquer GPU | `--accel directml` | `--features directml` | Como o OpenVINO: exige um ORT de sistema com o EP DirectML. Só Windows. |
 
-Known rough edges (F4):
-- `ja_h.png` is split into two boxes at the `。` plus a spurious separator glyph —
-  correct text, wrong line count. Needs same-row box merging.
-- `--lang auto` on Portuguese can pick the CJK recognizer at ~87 % confidence and
-  mangle diacritics (`ǎ` for `ã`). Above the 0.6 threshold, so no fallback fires.
-  Force `--lang latin`, or add a script heuristic. This is report Risk #4.
+`--accel auto` só tenta CUDA e cai para CPU (com o motivo registrado no log);
+nunca escolhe um *backend* de fornecedor silenciosamente.
 
-## Layout
+# 🤝 Contribuidores
 
-```
-crates/ocr-proto     wire types (serde only)
-crates/ocr-core      oar-ocr/ort boundary: engine, models, accel probe, lang fallback
-crates/ocrd          daemon
-crates/ocrd-client   client
-tests/data           the five synthetic images from report §1.4 / §7
-contrib              systemd unit, Hyprland binds
-```
+ <a href="https://github.com/luishenrique/ocr/graphs/contributors">
+   <img src="https://contrib.rocks/image?repo=luishenrique/ocr"/>
+ </a>
