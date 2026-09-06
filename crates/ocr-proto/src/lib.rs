@@ -102,6 +102,12 @@ impl fmt::Display for Lang {
 }
 
 /// Accelerator selection (report section 2.9).
+///
+/// `Auto` only ever tries CUDA (NVIDIA) then CPU — it never silently reaches for
+/// a vendor GPU backend. Intel and AMD are explicit opt-ins:
+/// `Openvino` for Intel iGPU/Arc, `Webgpu` for AMD on Linux (vendor-neutral via
+/// Vulkan), `Directml` for any vendor on Windows. Each requires the daemon to be
+/// built with the matching Cargo feature and fails loudly otherwise.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum Accel {
@@ -111,8 +117,17 @@ pub enum Accel {
     Auto,
     /// Force CPU.
     Cpu,
-    /// Require CUDA; fail loudly if it does not initialize.
+    /// Require the CUDA execution provider (NVIDIA).
     Cuda,
+    /// Require the OpenVINO execution provider, targeting the GPU device
+    /// (Intel iGPU / Arc; also covers Intel NPU and CPU fallback within OpenVINO).
+    Openvino,
+    /// Require the WebGPU execution provider — vendor-neutral, backed by
+    /// Vulkan/D3D12/Metal. The practical GPU path for AMD on Linux (ROCm is not
+    /// wired through the pipeline library).
+    Webgpu,
+    /// Require the DirectML execution provider (Windows only; AMD, Intel, NVIDIA).
+    Directml,
 }
 
 impl Accel {
@@ -121,8 +136,14 @@ impl Accel {
             Accel::Auto => "auto",
             Accel::Cpu => "cpu",
             Accel::Cuda => "cuda",
+            Accel::Openvino => "openvino",
+            Accel::Webgpu => "webgpu",
+            Accel::Directml => "directml",
         }
     }
+
+    /// Accepted `--accel` spellings, for CLI help.
+    pub const CHOICES: &'static str = "auto|cpu|cuda|openvino|webgpu|directml";
 }
 
 impl FromStr for Accel {
@@ -132,8 +153,14 @@ impl FromStr for Accel {
         match s.trim().to_ascii_lowercase().as_str() {
             "auto" | "" => Ok(Accel::Auto),
             "cpu" => Ok(Accel::Cpu),
-            "cuda" | "gpu" => Ok(Accel::Cuda),
-            other => Err(format!("unknown accelerator `{other}` (auto|cpu|cuda)")),
+            "cuda" | "nvidia" => Ok(Accel::Cuda),
+            "openvino" | "intel" | "vino" => Ok(Accel::Openvino),
+            "webgpu" | "vulkan" | "wgpu" | "amd" => Ok(Accel::Webgpu),
+            "directml" | "dml" => Ok(Accel::Directml),
+            other => Err(format!(
+                "unknown accelerator `{other}` ({})",
+                Accel::CHOICES
+            )),
         }
     }
 }
@@ -217,6 +244,33 @@ mod tests {
     fn every_listed_alias_parses() {
         for a in Lang::ALIASES {
             assert!(a.parse::<Lang>().is_ok(), "alias {a} should parse");
+        }
+    }
+
+    #[test]
+    fn accel_aliases_map_to_vendors() {
+        assert_eq!("cuda".parse::<Accel>().unwrap(), Accel::Cuda);
+        assert_eq!("nvidia".parse::<Accel>().unwrap(), Accel::Cuda);
+        assert_eq!("intel".parse::<Accel>().unwrap(), Accel::Openvino);
+        assert_eq!("openvino".parse::<Accel>().unwrap(), Accel::Openvino);
+        assert_eq!("amd".parse::<Accel>().unwrap(), Accel::Webgpu);
+        assert_eq!("vulkan".parse::<Accel>().unwrap(), Accel::Webgpu);
+        assert_eq!("dml".parse::<Accel>().unwrap(), Accel::Directml);
+        assert_eq!("".parse::<Accel>().unwrap(), Accel::Auto);
+        assert!("quantum".parse::<Accel>().is_err());
+    }
+
+    #[test]
+    fn accel_roundtrips_through_str() {
+        for a in [
+            Accel::Auto,
+            Accel::Cpu,
+            Accel::Cuda,
+            Accel::Openvino,
+            Accel::Webgpu,
+            Accel::Directml,
+        ] {
+            assert_eq!(a.as_str().parse::<Accel>().unwrap(), a);
         }
     }
 

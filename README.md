@@ -57,25 +57,31 @@ CPU is the default and needs nothing else.
 
 ### GPU (optional)
 
-Build with `--features cuda` **and** install a matching stack:
+`--accel` accepts `auto | cpu | cuda | openvino | webgpu | directml`. `auto`
+tries CUDA then CPU and **never** silently picks a vendor backend; the rest
+*require* their provider and fail loudly if it is missing (report §4). Every one
+is probed before it is trusted.
 
-```sh
-sudo pacman -S cudnn          # ORT rc.13 links cuDNN 9 / CUDA 12
-```
+For a single screenshot the CPU path is already fast enough (~30–130 ms warm
+here); GPU only pays off for batch flows (video, PDF — F6). So none of this is on
+the default path.
 
-> ⚠️ This host has CUDA 13.x; `ort` 2.0.0-rc.13 links `libcudart.so.12`.
-> The `--accel` probe checks for `libcudnn.so.9` and `libcudart.so.12` and refuses
-> to claim CUDA if either is missing, rather than falling back in silence
-> (report §4). Until the CUDA-12 runtime libs are present, `--accel cuda` will
-> fail loudly and `--accel auto` will stay on CPU with a logged reason. F0's
-> conclusion (report §2.9): for a single screenshot the CPU path is fast enough
-> (~30–130 ms warm here), so GPU is only worthwhile for batch flows (F6).
+| Vendor | Flag | Build | Reality with the prebuilt ONNX Runtime |
+|---|---|---|---|
+| **NVIDIA** | `--accel cuda` | `--features cuda` | Works, given cuDNN 9 + `libcudart.so.12` on the host. This machine has CUDA 13.x and no cuDNN, so the probe refuses and `auto` stays on CPU until `pacman -S cudnn` (and a CUDA-12 runtime). |
+| **Intel** iGPU / Arc / NPU | `--accel openvino` | `--features openvino` | **Does not link** with the downloaded ORT — pyke's prebuilt binaries omit OpenVINO. Needs a system ONNX Runtime built with it: `ORT_STRATEGY=system ORT_LIB_LOCATION=/path/to/onnxruntime cargo build --features openvino`. Then `--accel openvino` targets `GPU` (override with `OCRD_OPENVINO_DEVICE`). |
+| **AMD** on Linux | `--accel webgpu` | *(no feature flag)* | ROCm is not exposed by the pipeline library, and `ort/webgpu` makes the binary depend on `libwebgpu_dawn.so`, which the prebuilt ORT does not ship — enabling it breaks the daemon at load. Needs ONNX Runtime built from source with WebGPU/Dawn, linked via `ORT_STRATEGY=system`. Until then `--accel webgpu` returns a clean fatal error. |
+| **Windows**, any GPU | `--accel directml` | `--features directml` | Same as OpenVINO: needs a system ORT with the DirectML EP. Windows-only; on Linux the probe rejects it. |
+
+See <https://ort.pyke.io/setup/linking> for building/linking a system ONNX
+Runtime. The daemon and client code already speak every one of these flags — the
+only gap is the ORT binary.
 
 ## Run
 
 ```sh
 # terminal / systemd
-ocrd --accel auto                    # auto|cpu|cuda
+ocrd --accel auto        # auto|cpu|cuda|openvino|webgpu|directml
 
 # one-shot
 grim -g "$(slurp)" - | ocrd-client --lang auto | wl-copy
@@ -117,7 +123,7 @@ ocr --file invoice.png --json | jq -r '.lines[].text'
 xclip -selection clipboard -t image/png -o | ocr --lang latin
 ```
 
-Overridable via env: `OCRD_SOCKET`, `OCRD_ACCEL` (`auto|cpu|cuda`), `OCRD_BIN`,
+Overridable via env: `OCRD_SOCKET`, `OCRD_ACCEL` (`auto|cpu|cuda|openvino|webgpu|directml`), `OCRD_BIN`,
 `OCRD_CLIENT`.
 
 `ocrd-client --ping` exits 0 iff the daemon is reachable — useful for your own

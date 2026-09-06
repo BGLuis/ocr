@@ -21,11 +21,13 @@ use ocr_proto::{default_socket_path, Accel, Line, Ocr, Request, Response};
 #[derive(Parser, Debug)]
 #[command(version, about)]
 struct Args {
-    /// Accelerator: auto (try CUDA, fall back to CPU), cpu (force), cuda (require).
+    /// Accelerator. auto = try CUDA then CPU. cpu = force. The rest require that
+    /// provider (fatal if absent, no fallback) and the matching build feature:
+    /// cuda (NVIDIA), openvino (Intel GPU), webgpu (AMD on Linux), directml (Windows).
     #[arg(long, default_value = "auto")]
     accel: String,
 
-    /// CUDA device index, when accel resolves to CUDA.
+    /// GPU device index, for cuda / directml.
     #[arg(long, default_value_t = 0)]
     device_id: i32,
 

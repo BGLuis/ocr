@@ -16,7 +16,11 @@ After=graphical-session.target
 [Service]
 Type=simple
 # --accel auto probes CUDA and falls back to CPU with a logged reason.
-# Use --accel cpu to pin CPU, or --accel cuda to require the GPU (see report 2.9).
+#   cpu                  pin CPU
+#   cuda                 require NVIDIA (needs --features cuda + cuDNN 9)
+#   openvino             require Intel GPU (needs --features openvino + system ORT)
+#   webgpu               require AMD/Linux (needs a source ORT with Dawn)
+#   directml             require Windows GPU
 ExecStart=%h/.cargo/bin/ocrd --accel auto
 Environment=RUST_LOG=ocrd=info,ocr_core=info
 # Model cache location (oar-ocr default is ~/.oar).

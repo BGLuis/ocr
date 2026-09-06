@@ -14,7 +14,20 @@ description = "Isolation boundary around oar-ocr: one detector, three PP-OCRv5 r
 default = ["download-binaries", "auto-download"]
 download-binaries = ["oar-ocr/download-binaries"]
 auto-download = ["oar-ocr/auto-download"]
-cuda = ["oar-ocr/cuda", "ort/cuda"]
+# Accelerator execution providers. None are in `default` — a plain build stays
+# CPU-only. Each is an opt-in and the daemon probes it before trusting it.
+#
+# `cuda` works with the ONNX Runtime that `download-binaries` fetches (given
+# cuDNN 9 on the host). `openvino` and `directml` are NOT in those prebuilt
+# binaries: enabling them requires a system ONNX Runtime built with that EP
+# (`ORT_STRATEGY=system` + `ORT_LIB_LOCATION`, see https://ort.pyke.io/setup/linking).
+# There is no `webgpu` feature: the prebuilt ORT for Linux pulls libwebgpu_dawn.so
+# as a hard dependency that it does not ship, which makes the whole binary fail to
+# load. `--accel webgpu` therefore always errors cleanly until ORT is built from
+# source with Dawn.
+cuda = ["oar-ocr/cuda", "ort/cuda"]                # NVIDIA
+openvino = ["oar-ocr/openvino", "ort/openvino"]    # Intel iGPU / Arc / NPU
+directml = ["oar-ocr/directml", "ort/directml"]    # Windows only (AMD/Intel/NVIDIA)
 
 [dependencies]
 ocr-proto.workspace = true

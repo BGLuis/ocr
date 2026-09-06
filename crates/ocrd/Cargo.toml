@@ -11,12 +11,19 @@ name = "ocrd"
 path = "src/main.rs"
 
 [features]
-# Forwarded to ocr-core. `cuda` also needs a matching ONNX Runtime + cuDNN 9
-# on the host (report section 4); the daemon probes before trusting it.
+# Forwarded to ocr-core. A GPU feature also needs the matching runtime on the
+# host (report section 4); the daemon probes before trusting it.
+#   cuda     -> NVIDIA         (prebuilt ORT + cuDNN 9)
+#   openvino -> Intel iGPU/Arc (needs a system ORT built with OpenVINO)
+#   directml -> Windows, any GPU
+# AMD on Linux (--accel webgpu) needs a source build of ONNX Runtime with Dawn;
+# there is no feature flag because ort/webgpu breaks the prebuilt binary.
 default = ["download-binaries", "auto-download"]
 download-binaries = ["ocr-core/download-binaries"]
 auto-download = ["ocr-core/auto-download"]
 cuda = ["ocr-core/cuda"]
+openvino = ["ocr-core/openvino"]
+directml = ["ocr-core/directml"]
 
 [dependencies]
 ocr-core.workspace = true

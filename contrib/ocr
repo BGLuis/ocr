@@ -10,7 +10,7 @@
 #
 # Env overrides:
 #   OCRD_SOCKET   socket path         (default: $XDG_RUNTIME_DIR/ocrd.sock)
-#   OCRD_ACCEL    auto | cpu | cuda   (default: auto)
+#   OCRD_ACCEL    auto|cpu|cuda|openvino|webgpu|directml   (default: auto)
 #   OCRD_BIN      path to ocrd        (default: found on PATH)
 #   OCRD_CLIENT   path to ocrd-client (default: found on PATH)
 

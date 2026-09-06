@@ -9,10 +9,14 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    /// `--accel cuda` was requested but the CUDA execution provider could not
-    /// be initialized. Deliberately fatal (report section 2.9).
-    #[error("CUDA was required but is not available: {0}")]
-    CudaRequired(String),
+    /// A specific accelerator (`--accel cuda|openvino|webgpu|directml`) was
+    /// required but its execution provider could not be initialized.
+    /// Deliberately fatal (report section 2.9): no silent CPU fallback.
+    #[error("the `{provider}` accelerator was required but is not available: {reason}")]
+    AccelUnavailable {
+        provider: &'static str,
+        reason: String,
+    },
 
     /// A model or dictionary file could not be resolved or downloaded.
     #[error("model asset `{name}` could not be obtained: {source}")]
