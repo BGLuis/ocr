@@ -1,15 +1,17 @@
 <div align="center">
 
 <!-- GitHub status badges -->
-![GitHub Stars](https://www.shieldcn.dev/github/stars/luishenrique/ocr.svg?variant=secondary&size=sm)
-![GitHub Forks](https://www.shieldcn.dev/github/forks/luishenrique/ocr.svg?variant=secondary&size=sm)
-![Watchers](https://www.shieldcn.dev/github/watchers/luishenrique/ocr.svg?variant=secondary&size=sm)
-![Contributors](https://www.shieldcn.dev/github/contributors/luishenrique/ocr.svg?theme=emerald&size=sm)
-![License](https://www.shieldcn.dev/github/license/luishenrique/ocr.svg?variant=ghost&size=sm)
+
+![GitHub Stars](https://www.shieldcn.dev/github/stars/bgluis/ocr.svg?variant=secondary&size=sm)
+![GitHub Forks](https://www.shieldcn.dev/github/forks/bgluis/ocr.svg?variant=secondary&size=sm)
+![Watchers](https://www.shieldcn.dev/github/watchers/bgluis/ocr.svg?variant=secondary&size=sm)
+![Contributors](https://www.shieldcn.dev/github/contributors/bgluis/ocr.svg?theme=emerald&size=sm)
+![License](https://www.shieldcn.dev/github/license/bgluis/ocr.svg?variant=ghost&size=sm)
 
 <br/>
 
 <!-- Technology badges -->
+
 ![Rust](https://www.shieldcn.dev/badge/Rust-1.95%2B-000000.svg?logo=rust&variant=branded&size=sm)
 ![ONNX Runtime](https://www.shieldcn.dev/badge/ONNX_Runtime-static-005CED.svg?logo=onnx&variant=branded&size=sm)
 ![Linux](https://www.shieldcn.dev/badge/Linux-Wayland-FCC624.svg?logo=linux&variant=branded&size=sm)
@@ -80,14 +82,16 @@ liked and used a lot in PowerToys, now on my own Linux/Wayland setup.
 ### Installation
 
 1. Clone the project repository:
-  ```sh
-  git clone https://github.com/luishenrique/ocr.git
-  ```
+
+```sh
+git clone https://github.com/bgluis/ocr.git
+```
 
 2. Move into the project directory:
-  ```sh
-  cd ocr
-  ```
+
+```sh
+cd ocr
+```
 
 3. Pick **one** of the methods below.
 
@@ -137,27 +141,27 @@ cat contrib/hyprland.conf.example >> ~/.config/hypr/hyprland.conf
 
 Main `ocrd-client` options:
 
-| Flag | Meaning |
-|---|---|
-| `--lang` | `auto` (default), `cjk` / `ja` / `zh` / `en`, `korean` / `ko`, `latin` / `pt` / `es` / `fr` / `de` |
-| `--file PATH` | read the image from a file instead of stdin |
-| `--json` | full response (lines, per-line confidence, bboxes, timing) |
-| `--verbose` | per-line confidence to stderr, text to stdout |
-| `--ping` | exit 0 if `ocrd` is reachable; reads no image |
+| Flag          | Meaning                                                                                            |
+| ------------- | -------------------------------------------------------------------------------------------------- |
+| `--lang`      | `auto` (default), `cjk` / `ja` / `zh` / `en`, `korean` / `ko`, `latin` / `pt` / `es` / `fr` / `de` |
+| `--file PATH` | read the image from a file instead of stdin                                                        |
+| `--json`      | full response (lines, per-line confidence, bboxes, timing)                                         |
+| `--verbose`   | per-line confidence to stderr, text to stdout                                                      |
+| `--ping`      | exit 0 if `ocrd` is reachable; reads no image                                                      |
 
 ### Environment configuration
 
 The project has no `.env`; behavior is tuned through these variables:
 
-| Variable | Default | Purpose |
-|---|---|---|
-| `OCRD_SOCKET` | `$XDG_RUNTIME_DIR/ocrd.sock` | Unix socket path |
-| `OCRD_ACCEL` | `auto` | `auto\|cpu\|cuda\|openvino\|webgpu\|directml` |
-| `OAR_HOME` | `~/.oar` | ONNX model cache |
-| `OCRD_BIN` / `OCRD_CLIENT` | found on `PATH` | Binaries used by the `contrib/ocr` wrapper |
-| `OCRD_OPENVINO_DEVICE` | `GPU` | Target OpenVINO device |
-| `RUST_LOG` | `ocrd=info,ocr_core=info` | Log verbosity |
-| `OCR_REQUIRE_MODELS` | — | If set, recognition tests fail (instead of skipping) when models are missing |
+| Variable                   | Default                      | Purpose                                                                      |
+| -------------------------- | ---------------------------- | ---------------------------------------------------------------------------- |
+| `OCRD_SOCKET`              | `$XDG_RUNTIME_DIR/ocrd.sock` | Unix socket path                                                             |
+| `OCRD_ACCEL`               | `auto`                       | `auto\|cpu\|cuda\|openvino\|webgpu\|directml`                                |
+| `OAR_HOME`                 | `~/.oar`                     | ONNX model cache                                                             |
+| `OCRD_BIN` / `OCRD_CLIENT` | found on `PATH`              | Binaries used by the `contrib/ocr` wrapper                                   |
+| `OCRD_OPENVINO_DEVICE`     | `GPU`                        | Target OpenVINO device                                                       |
+| `RUST_LOG`                 | `ocrd=info,ocr_core=info`    | Log verbosity                                                                |
+| `OCR_REQUIRE_MODELS`       | —                            | If set, recognition tests fail (instead of skipping) when models are missing |
 
 ### Tests
 
@@ -170,18 +174,18 @@ OCR_REQUIRE_MODELS=1 cargo test -p ocr-core --test recognition
 
 ### GPU acceleration
 
-| Vendor | Flag | Build | Reality with the prebuilt ONNX Runtime |
-|---|---|---|---|
-| **NVIDIA** | `--accel cuda` | `--features cuda` | Works, given cuDNN 9 + `libcudart.so.12` on the host. |
+| Vendor                       | Flag               | Build                 | Reality with the prebuilt ONNX Runtime                                                                          |
+| ---------------------------- | ------------------ | --------------------- | --------------------------------------------------------------------------------------------------------------- |
+| **NVIDIA**                   | `--accel cuda`     | `--features cuda`     | Works, given cuDNN 9 + `libcudart.so.12` on the host.                                                           |
 | **Intel** (iGPU / Arc / NPU) | `--accel openvino` | `--features openvino` | Does not link with the downloaded ORT; needs a system ONNX Runtime built with OpenVINO (`ORT_STRATEGY=system`). |
-| **AMD** on Linux | `--accel webgpu` | *(no flag)* | Needs an ONNX Runtime built from source with WebGPU/Dawn; until then, a clean fatal error. |
-| **Windows**, any GPU | `--accel directml` | `--features directml` | Like OpenVINO: needs a system ORT with the DirectML EP. Windows only. |
+| **AMD** on Linux             | `--accel webgpu`   | _(no flag)_           | Needs an ONNX Runtime built from source with WebGPU/Dawn; until then, a clean fatal error.                      |
+| **Windows**, any GPU         | `--accel directml` | `--features directml` | Like OpenVINO: needs a system ORT with the DirectML EP. Windows only.                                           |
 
 `--accel auto` only ever tries CUDA and falls back to CPU (with the reason
 logged); it never silently picks a vendor backend.
 
 # 🤝 Contributors
 
- <a href="https://github.com/luishenrique/ocr/graphs/contributors">
-   <img src="https://contrib.rocks/image?repo=luishenrique/ocr"/>
+ <a href="https://github.com/bgluis/ocr/graphs/contributors">
+   <img src="https://contrib.rocks/image?repo=bgluis/ocr"/>
  </a>
