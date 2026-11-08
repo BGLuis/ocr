@@ -51,6 +51,17 @@ fn japanese_horizontal_is_read_correctly() {
 }
 
 #[test]
+fn japanese_horizontal_auto_has_clean_lines_and_cjk_label() {
+    let Some(engine) = engine() else { return };
+    let out = engine
+        .recognize_bytes(&read("ja_h.png"), Lang::Auto, None)
+        .unwrap_or_else(|e| panic!("recognize ja_h.png: {e}"));
+    assert_eq!(out.label, "cjk");
+    let line_texts: Vec<&str> = out.lines.iter().map(|l| l.text.trim()).collect();
+    assert_eq!(line_texts, vec!["吾輩は猫である。", "名前はまだ無い。"]);
+}
+
+#[test]
 fn chinese_is_read_correctly() {
     let Some(engine) = engine() else { return };
     let text = joined(&engine, "zh.png", Lang::Cjk);
