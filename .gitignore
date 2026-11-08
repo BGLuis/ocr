@@ -3,3 +3,4 @@
 *.pdb
 # Model cache — fetched on demand by `ocrd --warm` (default: ~/.oar)
 /models
+.worktrees/
