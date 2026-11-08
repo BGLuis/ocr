@@ -43,11 +43,11 @@ fn joined(engine: &Engine, name: &str, lang: Lang) -> String {
 #[test]
 fn japanese_horizontal_is_read_correctly() {
     let Some(engine) = engine() else { return };
-    let text = joined(&engine, "ja_h.png", Lang::Auto);
-    assert!(
-        text.contains("吾輩は猫である") && text.contains("名前はまだ無い"),
-        "expected the Soseki line, got: {text:?}"
-    );
+    let out = engine
+        .recognize_bytes(&read("ja_h.png"), Lang::Cjk, None)
+        .unwrap_or_else(|e| panic!("recognize ja_h.png: {e}"));
+    assert_eq!(out.text().trim(), "吾輩は猫である。名前はまだ無い。");
+    assert_eq!(out.lines.len(), 2);
 }
 
 #[test]
