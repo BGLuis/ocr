@@ -87,6 +87,15 @@ fn portuguese_diacritics_survive_latin() {
     }
 }
 
+#[test]
+fn portuguese_diacritics_survive_auto() {
+    let Some(engine) = engine() else { return };
+    let text = joined(&engine, "pt_diacriticos.png", Lang::Auto);
+    for word in ["ação", "você", "pêssego", "coração"] {
+        assert!(text.contains(word), "missing {word:?} in {text:?}");
+    }
+}
+
 /// A pure-noise image must come back with low confidence so the `Auto`
 /// fallback has a signal to act on (report 2.4, 5).
 #[test]
