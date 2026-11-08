@@ -34,3 +34,4 @@ base64.workspace = true
 anyhow.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
+signal-hook = "0.4"
