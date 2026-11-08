@@ -92,9 +92,19 @@ pub fn pick<'a>(
         return primary;
     }
 
+    let is_primary_empty = !primary.is_usable();
+
     std::iter::once(primary)
         .chain(retries.iter())
-        .filter(|c| c.is_usable())
+        .filter(|c| {
+            if !c.is_usable() {
+                return false;
+            }
+            if is_primary_empty && !c.text.chars().any(|ch| ch.is_alphanumeric()) {
+                return false;
+            }
+            true
+        })
         .max_by(|a, b| {
             a.confidence
                 .partial_cmp(&b.confidence)
@@ -122,6 +132,15 @@ mod tests {
 
     fn c(r: Recognizer, t: &str, conf: f32) -> Candidate {
         Candidate::new(r, t, conf)
+    }
+
+    #[test]
+    fn empty_primary_rejects_symbol_only_retry() {
+        let primary = c(Recognizer::Cjk, "", 0.0);
+        let retries = [c(Recognizer::Latin, "−", 0.79)];
+        let w = pick(&primary, &retries, DEFAULT_MIN_CONFIDENCE);
+        assert_eq!(w.recognizer, Recognizer::Cjk);
+        assert_eq!(w.text, "");
     }
 
     #[test]
