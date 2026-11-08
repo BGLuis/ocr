@@ -252,13 +252,14 @@ fn handle(engine: &Engine, mut stream: UnixStream) -> Result<()> {
 
 fn process(engine: &Engine, req_line: &str) -> Result<Ocr> {
     let req: Request = serde_json::from_str(req_line.trim()).context("decoding request")?;
+    req.validate().map_err(|e| anyhow::anyhow!("{e}"))?;
     let bytes = BASE64_STANDARD
         .decode(req.image_b64.as_bytes())
         .context("decoding base64 image")?;
 
     let t0 = Instant::now();
     let out = engine
-        .recognize_bytes(&bytes, req.lang)
+        .recognize_bytes(&bytes, req.lang, req.min_confidence)
         .context("recognition failed")?;
     let elapsed_ms = t0.elapsed().as_millis() as u64;
 

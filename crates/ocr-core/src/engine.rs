@@ -140,16 +140,27 @@ impl Engine {
     }
 
     /// Decode `bytes` (PNG/JPEG/WebP/BMP) and recognize.
-    pub fn recognize_bytes(&self, bytes: &[u8], lang: Lang) -> Result<Recognition> {
+    pub fn recognize_bytes(
+        &self,
+        bytes: &[u8],
+        lang: Lang,
+        min_confidence: Option<f32>,
+    ) -> Result<Recognition> {
         let img = image::load_from_memory(bytes)
             .map_err(|e| Error::ImageDecode(e.to_string()))?
             .to_rgb8();
-        self.recognize(&img, lang)
+        self.recognize(&img, lang, min_confidence)
     }
 
     /// Detect text boxes once, recognize them, and (under [`Lang::Auto`]) retry
     /// the low-confidence boxes with the other recognizers.
-    pub fn recognize(&self, image: &RgbImage, lang: Lang) -> Result<Recognition> {
+    pub fn recognize(
+        &self,
+        image: &RgbImage,
+        lang: Lang,
+        min_confidence: Option<f32>,
+    ) -> Result<Recognition> {
+        let min_confidence = min_confidence.unwrap_or(self.min_confidence);
         let empty = |label_recs: &[Recognizer]| Recognition {
             lines: Vec::new(),
             label: lang::result_label(lang, label_recs),
@@ -206,7 +217,7 @@ impl Engine {
             let weak: Vec<usize> = chosen
                 .iter()
                 .enumerate()
-                .filter(|(_, c)| lang::needs_retry(c, self.min_confidence))
+                .filter(|(_, c)| lang::needs_retry(c, min_confidence))
                 .map(|(i, _)| i)
                 .collect();
 
@@ -226,7 +237,7 @@ impl Engine {
                     }
                 }
                 for (wi, &pi) in weak.iter().enumerate() {
-                    let winner = lang::pick(&chosen[pi], &retries[wi], self.min_confidence).clone();
+                    let winner = lang::pick(&chosen[pi], &retries[wi], min_confidence).clone();
                     chosen[pi] = winner;
                 }
             }
