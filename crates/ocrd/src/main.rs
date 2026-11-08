@@ -5,11 +5,11 @@
 //! for a single screenshot the cost is dominated by startup, not inference
 //! (report section 2.7).
 
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::os::unix::fs::{MetadataExt, PermissionsExt};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::{Path, PathBuf};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result};
 use base64::prelude::{Engine as _, BASE64_STANDARD};
@@ -222,15 +222,38 @@ impl Drop for SocketGuard {
     }
 }
 
+const MAX_REQUEST_BYTES: u64 = 64 * 1024 * 1024; // 64 MiB
+const READ_TIMEOUT: Duration = Duration::from_secs(5);
+
 fn handle(engine: &Engine, mut stream: UnixStream) -> Result<()> {
+    if let Err(e) = stream.set_read_timeout(Some(READ_TIMEOUT)) {
+        tracing::warn!(err = %e, "failed to set read timeout on socket");
+    }
+
     let mut req_line = String::new();
     {
-        let mut reader = BufReader::new(&mut stream);
-        reader
-            .read_line(&mut req_line)
-            .context("reading request line")?;
+        let mut reader = BufReader::new(&mut stream).take(MAX_REQUEST_BYTES);
+        match reader.read_line(&mut req_line) {
+            Ok(0) => return Ok(()),
+            Ok(_) => {}
+            Err(e) => {
+                tracing::warn!(err = %e, "reading request line failed");
+                return Ok(());
+            }
+        }
     }
     if req_line.trim().is_empty() {
+        return Ok(());
+    }
+    if req_line.len() as u64 >= MAX_REQUEST_BYTES {
+        let response = Response::Error {
+            message: format!("request exceeded maximum size of {MAX_REQUEST_BYTES} bytes"),
+        };
+        if let Ok(mut out) = serde_json::to_string(&response) {
+            out.push('\n');
+            let _ = stream.write_all(out.as_bytes());
+            let _ = stream.flush();
+        }
         return Ok(());
     }
 
