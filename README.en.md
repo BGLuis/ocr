@@ -95,7 +95,24 @@ cd ocr
 
 3. Pick **one** of the methods below.
 
-#### Method 1 — `cargo install` (recommended)
+#### Method 1 — Arch Linux (AUR via `yay` or `paru`)
+
+The package files are located in `aur/` for Arch User Repository (AUR) distribution:
+
+```sh
+# Install with yay
+yay -S ocr
+
+# Or with paru
+paru -S ocr
+
+# Download models to ~/.oar and enable the user daemon service
+ocrd --warm
+systemctl --user daemon-reload
+systemctl --user enable --now ocrd
+```
+
+#### Method 2 — `cargo install` (recommended for other distros)
 
 Installs both binaries into `~/.cargo/bin` and fetches the models once:
 
@@ -108,7 +125,7 @@ ocrd --warm                               # downloads the models to ~/.oar
 install -Dm755 contrib/ocr ~/.local/bin/ocr
 ```
 
-#### Method 2 — build from source
+#### Method 3 — build from source
 
 ```sh
 cargo build --release                     # LTO, binaries in ./target/release

@@ -187,8 +187,7 @@ fn prepare_socket_dir(dir: &Path) -> Result<()> {
         }
         Ok(_) => anyhow::bail!("{} exists and is not a directory", dir.display()),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-            std::fs::create_dir_all(dir)
-                .with_context(|| format!("creating {}", dir.display()))?;
+            std::fs::create_dir_all(dir).with_context(|| format!("creating {}", dir.display()))?;
             std::fs::set_permissions(dir, std::fs::Permissions::from_mode(0o700))
                 .with_context(|| format!("restricting {} to 0700", dir.display()))?;
             Ok(())
@@ -244,7 +243,9 @@ fn handle(engine: &Engine, mut stream: UnixStream) -> Result<()> {
 
     let mut out = serde_json::to_string(&response).context("encoding response")?;
     out.push('\n');
-    stream.write_all(out.as_bytes()).context("writing response")?;
+    stream
+        .write_all(out.as_bytes())
+        .context("writing response")?;
     stream.flush().ok();
     Ok(())
 }

@@ -1,0 +1,18 @@
+pkgbase = ocr
+	pkgdesc = Resident multilingual text recognition daemon and client for Wayland/Linux
+	pkgver = 0.1.0
+	pkgrel = 1
+	url = https://github.com/bgluis/ocr
+	arch = x86_64
+	license = Apache-2.0
+	makedepends = cargo
+	depends = gcc-libs
+	depends = glibc
+	optdepends = grim: Wayland screen capture utility
+	optdepends = slurp: interactive region selector for Wayland
+	optdepends = wl-clipboard: Wayland clipboard integration
+	options = !lto
+	source = ocr-0.1.0.tar.gz::https://github.com/bgluis/ocr/archive/refs/tags/v0.1.0.tar.gz
+	sha256sums = SKIP
+
+pkgname = ocr

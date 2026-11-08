@@ -63,7 +63,10 @@ fn chinese_is_read_correctly() {
 fn korean_model_selection_matters() {
     let Some(engine) = engine() else { return };
     let with_korean = joined(&engine, "ko.png", Lang::Korean);
-    assert!(with_korean.contains("안녕하세요"), "korean model: {with_korean:?}");
+    assert!(
+        with_korean.contains("안녕하세요"),
+        "korean model: {with_korean:?}"
+    );
 
     let with_cjk = joined(&engine, "ko.png", Lang::Cjk);
     assert_ne!(

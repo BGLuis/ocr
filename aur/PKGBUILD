@@ -1,0 +1,58 @@
+# Maintainer: Luis Henrique <luishenrique.gbarbosa21@gmail.com>
+pkgname=ocr
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Resident multilingual text recognition daemon and client for Wayland/Linux"
+arch=('x86_64')
+url="https://github.com/bgluis/ocr"
+license=('Apache-2.0')
+depends=('gcc-libs' 'glibc')
+makedepends=('cargo')
+optdepends=(
+    'grim: Wayland screen capture utility'
+    'slurp: interactive region selector for Wayland'
+    'wl-clipboard: Wayland clipboard integration'
+)
+options=('!lto')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+prepare() {
+    cd "$pkgname-$pkgver"
+    export RUSTUP_TOOLCHAIN=stable
+    cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+    cd "$pkgname-$pkgver"
+    export RUSTUP_TOOLCHAIN=stable
+    export CARGO_TARGET_DIR=target
+    cargo build --frozen --release
+}
+
+check() {
+    cd "$pkgname-$pkgver"
+    export RUSTUP_TOOLCHAIN=stable
+    cargo test --frozen
+}
+
+package() {
+    cd "$pkgname-$pkgver"
+
+    # Install binaries
+    install -Dm755 "target/release/ocrd" "$pkgdir/usr/bin/ocrd"
+    install -Dm755 "target/release/ocrd-client" "$pkgdir/usr/bin/ocrd-client"
+    install -Dm755 "contrib/ocr" "$pkgdir/usr/bin/ocr"
+
+    # Install systemd user service with /usr/bin/ocrd path
+    install -d "$pkgdir/usr/lib/systemd/user"
+    sed -e 's|%h/.cargo/bin/ocrd|/usr/bin/ocrd|' \
+        contrib/ocrd.service > "$pkgdir/usr/lib/systemd/user/ocrd.service"
+
+    # Install documentation and examples
+    install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+    install -Dm644 contrib/hyprland.conf.example "$pkgdir/usr/share/doc/$pkgname/hyprland.conf.example"
+
+    # Install license
+    install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

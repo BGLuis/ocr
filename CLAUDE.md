@@ -109,7 +109,8 @@ is no signal-handler cleanup yet (F3 caveat).
 ## Deploy artifacts
 
 `contrib/ocrd.service` (systemd --user unit), `contrib/hyprland.conf.example` (keybinds),
-`contrib/ocr` (a no-systemd wrapper that starts `ocrd` on first call). Env overrides:
+`contrib/ocr` (a no-systemd wrapper that starts `ocrd` on first call), `aur/PKGBUILD` &
+`aur/.SRCINFO` (Arch Linux / yay package definition). Env overrides:
 `OCRD_SOCKET`, `OCRD_ACCEL`, `OCRD_BIN`, `OCRD_CLIENT`, `OAR_HOME`, `OCRD_OPENVINO_DEVICE`.
 
 ## Test images

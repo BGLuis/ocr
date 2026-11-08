@@ -226,8 +226,7 @@ impl Engine {
                     }
                 }
                 for (wi, &pi) in weak.iter().enumerate() {
-                    let winner =
-                        lang::pick(&chosen[pi], &retries[wi], self.min_confidence).clone();
+                    let winner = lang::pick(&chosen[pi], &retries[wi], self.min_confidence).clone();
                     chosen[pi] = winner;
                 }
             }
@@ -260,7 +259,10 @@ impl Engine {
 /// Download (or locate) every model and dictionary the engine needs, without
 /// building sessions. For an `ocrd --warm` / F0 prefetch step.
 pub fn prefetch() -> Result<Vec<std::path::PathBuf>> {
-    models::all_assets().iter().map(|n| models::ensure(n)).collect()
+    models::all_assets()
+        .iter()
+        .map(|n| models::ensure(n))
+        .collect()
 }
 
 /// Sort box indices into reading order: rows top-to-bottom (bucketed by the

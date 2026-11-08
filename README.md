@@ -97,7 +97,24 @@ cd ocr
 
 3. Escolha **um** dos métodos abaixo.
 
-#### Método 1 — `cargo install` (recomendado)
+#### Método 1 — Arch Linux (AUR via `yay` ou `paru`)
+
+O pacote está estruturado no diretório `aur/` para publicação no Arch User Repository (AUR):
+
+```sh
+# Instalação com yay
+yay -S ocr
+
+# Ou com paru
+paru -S ocr
+
+# Baixa os modelos para ~/.oar e inicia o serviço de usuário
+ocrd --warm
+systemctl --user daemon-reload
+systemctl --user enable --now ocrd
+```
+
+#### Método 2 — `cargo install` (recomendado para outros ambientes)
 
 Instala os dois binários em `~/.cargo/bin` e baixa os modelos uma vez:
 
@@ -110,7 +127,7 @@ ocrd --warm                               # baixa os modelos para ~/.oar
 install -Dm755 contrib/ocr ~/.local/bin/ocr
 ```
 
-#### Método 2 — compilar a partir do código-fonte
+#### Método 3 — compilar a partir do código-fonte
 
 ```sh
 cargo build --release                     # LTO, binários em ./target/release

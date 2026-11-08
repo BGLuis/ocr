@@ -70,9 +70,30 @@ impl Lang {
 
     /// Every accepted spelling, for CLI help text.
     pub const ALIASES: &'static [&'static str] = &[
-        "auto", "cjk", "ja", "japanese", "jpn", "zh", "chinese", "chi", "en", "english", "eng",
-        "ko", "korean", "kor", "latin", "pt", "portuguese", "por", "es", "spanish", "fr", "french",
-        "de", "german",
+        "auto",
+        "cjk",
+        "ja",
+        "japanese",
+        "jpn",
+        "zh",
+        "chinese",
+        "chi",
+        "en",
+        "english",
+        "eng",
+        "ko",
+        "korean",
+        "kor",
+        "latin",
+        "pt",
+        "portuguese",
+        "por",
+        "es",
+        "spanish",
+        "fr",
+        "french",
+        "de",
+        "german",
     ];
 }
 
@@ -82,8 +103,8 @@ impl FromStr for Lang {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.trim().to_ascii_lowercase().as_str() {
             "auto" | "" => Ok(Lang::Auto),
-            "cjk" | "ja" | "japanese" | "jpn" | "zh" | "chinese" | "chi" | "zh-hans" | "zh-hant"
-            | "en" | "english" | "eng" => Ok(Lang::Cjk),
+            "cjk" | "ja" | "japanese" | "jpn" | "zh" | "chinese" | "chi" | "zh-hans"
+            | "zh-hant" | "en" | "english" | "eng" => Ok(Lang::Cjk),
             "ko" | "korean" | "kor" => Ok(Lang::Korean),
             "latin" | "pt" | "portuguese" | "por" | "pt-br" | "es" | "spanish" | "spa" | "fr"
             | "french" | "fra" | "de" | "german" | "deu" | "it" | "italian" => Ok(Lang::Latin),

@@ -73,10 +73,7 @@ fn run() -> Result<()> {
             .map_err(|e| anyhow::anyhow!("ocrd not reachable at {} ({e})", sock.display()));
     }
 
-    let lang: Lang = args
-        .lang
-        .parse()
-        .map_err(|e: String| anyhow::anyhow!(e))?;
+    let lang: Lang = args.lang.parse().map_err(|e: String| anyhow::anyhow!(e))?;
 
     let image = match &args.file {
         Some(p) => std::fs::read(p).with_context(|| format!("reading {}", p.display()))?,

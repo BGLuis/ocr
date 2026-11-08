@@ -12,7 +12,7 @@ version = "0.1.0"
 edition = "2021"
 rust-version = "1.95"
 license = "Apache-2.0"
-repository = "https://github.com/luishenrique/ocr"
+repository = "https://github.com/bgluis/ocr"
 
 [workspace.dependencies]
 # Pinned exactly: `ort` has never had a stable release and its API changes

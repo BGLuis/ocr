@@ -10,7 +10,7 @@
 
 [Unit]
 Description=Resident multilingual OCR daemon (PP-OCRv5 via oar-ocr)
-Documentation=file:%h/Documents/hand-on/OCR/README.md
+Documentation=https://github.com/bgluis/ocr
 After=graphical-session.target
 
 [Service]

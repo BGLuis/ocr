@@ -97,7 +97,10 @@ mod tests {
     fn confident_primary_wins_without_retry() {
         let primary = c(Recognizer::Cjk, "吾輩は猫である", 0.94);
         assert!(!needs_retry(&primary, DEFAULT_MIN_CONFIDENCE));
-        assert_eq!(pick(&primary, &[], DEFAULT_MIN_CONFIDENCE).text, "吾輩は猫である");
+        assert_eq!(
+            pick(&primary, &[], DEFAULT_MIN_CONFIDENCE).text,
+            "吾輩は猫である"
+        );
     }
 
     #[test]
@@ -118,7 +121,10 @@ mod tests {
         let primary = c(Recognizer::Cjk, "   ", 0.99);
         assert!(needs_retry(&primary, DEFAULT_MIN_CONFIDENCE));
         let retries = [c(Recognizer::Latin, "ação", 0.72)];
-        assert_eq!(pick(&primary, &retries, DEFAULT_MIN_CONFIDENCE).text, "ação");
+        assert_eq!(
+            pick(&primary, &retries, DEFAULT_MIN_CONFIDENCE).text,
+            "ação"
+        );
     }
 
     #[test]
@@ -131,7 +137,10 @@ mod tests {
 
     #[test]
     fn label_is_mixed_only_when_buckets_differ() {
-        assert_eq!(result_label(Lang::Auto, &[Recognizer::Cjk, Recognizer::Cjk]), "cjk");
+        assert_eq!(
+            result_label(Lang::Auto, &[Recognizer::Cjk, Recognizer::Cjk]),
+            "cjk"
+        );
         assert_eq!(
             result_label(Lang::Auto, &[Recognizer::Cjk, Recognizer::Latin]),
             "mixed"

@@ -1,0 +1,65 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read # checkout repository code
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Cargo dependency cache
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Cache OCR models
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.oar
+          key: ocr-models-${{ hashFiles('crates/ocr-core/src/models.rs') }}
+          restore-keys: |
+            ocr-models-
+
+      - name: Code format check
+        run: cargo fmt --check
+
+      - name: Clippy lint
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+      - name: Download OCR models
+        run: cargo run -p ocrd --locked -- --warm
+
+      - name: Run all workspace tests with models
+        env:
+          OCR_REQUIRE_MODELS: "1"
+        run: cargo test --workspace --locked
+
+      - name: Build debug binaries
+        run: cargo build --locked
+
+      - name: Validate AUR PKGBUILD and .SRCINFO
+        run: |
+          docker run --rm -v "${PWD}/aur:/pkg:ro" -w /tmp \
+            archlinux@sha256:2de80105abb49f813a85393c6758a4334deb6bcec4a2411bd2f059c0bee6ee4c \
+            bash -c 'useradd -m builder && cp -r /pkg /home/builder/pkg && chown -R builder:builder /home/builder/pkg && su builder -c "cd /home/builder/pkg && makepkg --printsrcinfo > .SRCINFO && diff -u /pkg/.SRCINFO .SRCINFO"'
+

@@ -293,9 +293,7 @@ pub fn probe_directml() -> std::result::Result<(), String> {
 
             match DirectML::default().is_available() {
                 Ok(true) => Ok(()),
-                Ok(false) => {
-                    Err("ONNX Runtime was not built with DirectML support".to_string())
-                }
+                Ok(false) => Err("ONNX Runtime was not built with DirectML support".to_string()),
                 Err(e) => Err(format!("DirectML query failed: {e}")),
             }
         }
@@ -303,10 +301,7 @@ pub fn probe_directml() -> std::result::Result<(), String> {
 }
 
 /// Search the usual loader paths for a shared object by file name.
-#[cfg_attr(
-    not(any(feature = "cuda", feature = "openvino")),
-    allow(dead_code)
-)]
+#[cfg_attr(not(any(feature = "cuda", feature = "openvino")), allow(dead_code))]
 fn find_lib(name: &str) -> Option<PathBuf> {
     let mut dirs: Vec<PathBuf> = Vec::new();
     for var in ["LD_LIBRARY_PATH", "CUDA_PATH", "INTEL_OPENVINO_DIR"] {
