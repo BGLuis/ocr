@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+repository.workspace = true
 description = "Isolation boundary around oar-ocr: one detector, three PP-OCRv5 recognizers, recognize() -> Vec<TextLine>"
 
 [features]
