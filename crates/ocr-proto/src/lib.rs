@@ -125,10 +125,10 @@ impl fmt::Display for Lang {
 /// Accelerator selection (report section 2.9).
 ///
 /// `Auto` only ever tries CUDA (NVIDIA) then CPU — it never silently reaches for
-/// a vendor GPU backend. Intel and AMD are explicit opt-ins:
-/// `Openvino` for Intel iGPU/Arc, `Webgpu` for AMD on Linux (vendor-neutral via
-/// Vulkan), `Directml` for any vendor on Windows. Each requires the daemon to be
-/// built with the matching Cargo feature and fails loudly otherwise.
+/// a vendor GPU backend. Intel and other vendors are explicit opt-ins:
+/// `Openvino` for Intel iGPU/Arc, `Webgpu` (vendor-neutral via Vulkan; requires
+/// ONNX Runtime built with Dawn), `Directml` for any vendor on Windows. Each requires
+/// the daemon to be built with the matching Cargo feature and fails loudly otherwise.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum Accel {
@@ -144,7 +144,7 @@ pub enum Accel {
     /// (Intel iGPU / Arc; also covers Intel NPU and CPU fallback within OpenVINO).
     Openvino,
     /// Require the WebGPU execution provider — vendor-neutral, backed by
-    /// Vulkan/D3D12/Metal. The practical GPU path for AMD on Linux (ROCm is not
+    /// Vulkan/D3D12/Metal (requires ONNX Runtime compiled with Dawn; ROCm is not
     /// wired through the pipeline library).
     Webgpu,
     /// Require the DirectML execution provider (Windows only; AMD, Intel, NVIDIA).
