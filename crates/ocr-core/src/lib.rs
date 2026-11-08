@@ -12,7 +12,7 @@
 //! # fn main() -> anyhow::Result<()> {
 //! let engine = Engine::load(&EngineConfig::default())?;
 //! let png = std::fs::read("shot.png")?;
-//! let out = engine.recognize_bytes(&png, Lang::Auto)?;
+//! let out = engine.recognize_bytes(&png, Lang::Auto, None)?;
 //! println!("{}", out.text());
 //! # Ok(())
 //! # }

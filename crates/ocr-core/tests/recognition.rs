@@ -33,7 +33,7 @@ fn read(name: &str) -> Vec<u8> {
 
 fn joined(engine: &Engine, name: &str, lang: Lang) -> String {
     engine
-        .recognize_bytes(&read(name), lang)
+        .recognize_bytes(&read(name), lang, None)
         .unwrap_or_else(|e| panic!("recognize {name}: {e}"))
         .text()
 }
@@ -107,12 +107,26 @@ fn noise_image_has_low_confidence() {
         let v = ((i * 2654435761usize) >> 13) as u8;
         *p = image::Rgb([v, v ^ 0x5a, v.wrapping_mul(3)]);
     }
-    let out = engine.recognize(&img, Lang::Auto).expect("recognize noise");
+    let out = engine
+        .recognize(&img, Lang::Auto, None)
+        .expect("recognize noise");
     assert!(
         out.lines.iter().all(|l| l.confidence < 0.9),
         "noise should not yield a high-confidence line: {:?}",
         out.lines
     );
+}
+
+#[test]
+fn min_confidence_triggers_retry() {
+    let Some(engine) = engine() else { return };
+    let out = engine
+        .recognize_bytes(&read("pt_diacriticos.png"), Lang::Auto, Some(0.9))
+        .unwrap_or_else(|e| panic!("recognize pt_diacriticos: {e}"));
+    let text = out.text();
+    for word in ["ação", "coração"] {
+        assert!(text.contains(word), "missing {word:?} in {text:?}");
+    }
 }
 
 #[test]

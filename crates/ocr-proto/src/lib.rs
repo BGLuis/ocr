@@ -209,6 +209,23 @@ pub struct Request {
     pub v: u32,
 }
 
+impl Request {
+    /// Validate request parameters.
+    pub fn validate(&self) -> std::result::Result<(), String> {
+        if self.v != 1 {
+            return Err(format!("unsupported protocol version: {}", self.v));
+        }
+        if let Some(min_conf) = self.min_confidence {
+            if !(0.0..=1.0).contains(&min_conf) {
+                return Err(format!(
+                    "min_confidence must be between 0.0 and 1.0, got {min_conf}"
+                ));
+            }
+        }
+        Ok(())
+    }
+}
+
 fn one() -> u32 {
     1
 }
@@ -307,5 +324,30 @@ mod tests {
         let back: Request = serde_json::from_str(&line).unwrap();
         assert_eq!(back.lang, Lang::Latin);
         assert_eq!(back.min_confidence, Some(0.6));
+    }
+
+    #[test]
+    fn request_validation() {
+        let mut req = Request {
+            image_b64: "aGk=".into(),
+            lang: Lang::Latin,
+            min_confidence: None,
+            v: 1,
+        };
+        assert!(req.validate().is_ok());
+
+        req.min_confidence = Some(0.9);
+        assert!(req.validate().is_ok());
+
+        req.min_confidence = Some(1.5);
+        assert!(req.validate().is_err());
+
+        req.min_confidence = Some(-0.1);
+        assert!(req.validate().is_err());
+
+        req.min_confidence = Some(0.9);
+        req.v = 2;
+        let err = req.validate().unwrap_err();
+        assert!(err.contains("version"), "expected 'version' in {err}");
     }
 }
