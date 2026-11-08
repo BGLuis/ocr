@@ -86,6 +86,8 @@ pub fn is_han_or_kana(c: char) -> bool {
             | '\u{ff65}'..='\u{ff9f}'
             // CJK Symbols and Punctuation
             | '\u{3000}'..='\u{303f}'
+            // Fullwidth Forms (punctuation & symbols)
+            | '\u{ff01}'..='\u{ff5e}'
     )
 }
 

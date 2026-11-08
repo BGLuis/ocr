@@ -245,7 +245,7 @@ fn handle(engine: &Engine, mut stream: UnixStream) -> Result<()> {
 
     let mut req_line = String::new();
     {
-        let mut reader = BufReader::new(&mut stream).take(MAX_REQUEST_BYTES);
+        let mut reader = BufReader::new(&mut stream).take(MAX_REQUEST_BYTES + 1);
         match reader.read_line(&mut req_line) {
             Ok(0) => return Ok(()),
             Ok(_) => {}
@@ -258,7 +258,7 @@ fn handle(engine: &Engine, mut stream: UnixStream) -> Result<()> {
     if req_line.trim().is_empty() {
         return Ok(());
     }
-    if req_line.len() as u64 >= MAX_REQUEST_BYTES {
+    if req_line.len() as u64 > MAX_REQUEST_BYTES {
         let response = Response::Error {
             message: format!("request exceeded maximum size of {MAX_REQUEST_BYTES} bytes"),
         };

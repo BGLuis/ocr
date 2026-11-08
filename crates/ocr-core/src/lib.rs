@@ -25,7 +25,9 @@ mod lang;
 mod models;
 
 pub use accel::{plan as accel_plan, probe as accel_probe, Accel, Effective, Plan};
-pub use engine::{prefetch, Engine, EngineConfig, Recognition, RectBox, TextLine};
+pub use engine::{
+    format_text_lines, group_rows, prefetch, Engine, EngineConfig, Recognition, RectBox, TextLine,
+};
 pub use error::{Error, Result};
 pub use lang::DEFAULT_MIN_CONFIDENCE;
 pub use models::{Recognizer, DET_MODEL};

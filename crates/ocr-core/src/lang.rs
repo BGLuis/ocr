@@ -94,23 +94,21 @@ pub fn pick<'a>(
 
     let is_primary_empty = !primary.is_usable();
 
-    std::iter::once(primary)
-        .chain(retries.iter())
-        .filter(|c| {
-            if !c.is_usable() {
-                return false;
-            }
-            if is_primary_empty && !c.text.chars().any(|ch| ch.is_alphanumeric()) {
-                return false;
-            }
-            true
-        })
-        .max_by(|a, b| {
-            a.confidence
-                .partial_cmp(&b.confidence)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        })
-        .unwrap_or(primary)
+    let mut best: Option<&'a Candidate> = None;
+    for c in std::iter::once(primary).chain(retries.iter()) {
+        if !c.is_usable() {
+            continue;
+        }
+        if is_primary_empty && !c.text.chars().any(|ch| ch.is_alphanumeric()) {
+            continue;
+        }
+        match best {
+            None => best = Some(c),
+            Some(b) if c.confidence > b.confidence => best = Some(c),
+            _ => {}
+        }
+    }
+    best.unwrap_or(primary)
 }
 
 /// Label for the whole result: the single recognizer that answered, or
@@ -151,6 +149,25 @@ mod tests {
         let w = pick(&primary, &retries, DEFAULT_MIN_CONFIDENCE);
         assert_eq!(w.recognizer, Recognizer::Latin);
         assert_eq!(w.text, "ação");
+    }
+
+    #[test]
+    fn ties_prefer_primary() {
+        let primary = c(Recognizer::Cjk, "test", 0.85);
+        let retries = [c(Recognizer::Latin, "test", 0.85)];
+        let w = pick(&primary, &retries, DEFAULT_MIN_CONFIDENCE);
+        assert_eq!(w.recognizer, Recognizer::Cjk);
+    }
+
+    #[test]
+    fn ties_prefer_earlier_retry() {
+        let primary = c(Recognizer::Cjk, "", 0.0);
+        let retries = [
+            c(Recognizer::Korean, "hello", 0.85),
+            c(Recognizer::Latin, "hello", 0.85),
+        ];
+        let w = pick(&primary, &retries, DEFAULT_MIN_CONFIDENCE);
+        assert_eq!(w.recognizer, Recognizer::Korean);
     }
 
     #[test]

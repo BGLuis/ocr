@@ -85,6 +85,16 @@ fn korean_model_selection_matters() {
         with_cjk.trim(),
         "korean and cjk recognizers must not agree on ko.png"
     );
+
+    let out_auto = engine
+        .recognize_bytes(&read("ko.png"), Lang::Auto, None)
+        .expect("recognize ko.png auto");
+    assert_eq!(out_auto.label, "korean");
+    assert!(
+        out_auto.text().contains("안녕하세요 세계"),
+        "expected korean text in auto mode, got: {:?}",
+        out_auto.text()
+    );
 }
 
 /// The domestic case, easiest to forget: Portuguese diacritics survive the

@@ -100,8 +100,8 @@ base64-encoded inside the request. Serial, single-connection (no concurrency yet
 Socket path: `$XDG_RUNTIME_DIR/ocrd.sock`, else a per-user temp subdir
 (`<tmp>/ocrd-<user>/ocrd.sock`) — never a bare file in shared `/tmp`. The daemon enforces
 owner-only access: parent dir 0700 and refused if owned by another uid, stale socket removed
-only if we own it, socket chmod'd 0600 after bind. `SocketGuard` removes it on drop; there
-is no signal-handler cleanup yet (F3 caveat).
+only if we own it, socket chmod'd 0600 after bind. `SocketGuard` removes it on drop, and a
+signal thread removes it cleanly on SIGTERM/SIGINT.
 
 `Lang` and `Accel` (in `ocr-proto`) accept many human spellings (`ja`, `zh-Hans`, `pt-BR`,
 `nvidia`, `intel`, `amd`, …) that collapse onto the internal buckets — see their `FromStr`.
