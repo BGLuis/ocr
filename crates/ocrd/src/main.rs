@@ -103,6 +103,19 @@ fn run() -> Result<()> {
     let sock_path = args.socket.unwrap_or_else(default_socket_path);
     let listener = bind(&sock_path)?;
     let _guard = SocketGuard(sock_path.clone());
+
+    let sock_for_signal = sock_path.clone();
+    std::thread::spawn(move || {
+        use signal_hook::consts::signal::*;
+        use signal_hook::iterator::Signals;
+        if let Ok(mut signals) = Signals::new([SIGTERM, SIGINT]) {
+            if let Some(_sig) = signals.forever().next() {
+                let _ = std::fs::remove_file(&sock_for_signal);
+                std::process::exit(0);
+            }
+        }
+    });
+
     tracing::info!(socket = %sock_path.display(), "listening");
 
     for conn in listener.incoming() {

@@ -27,7 +27,7 @@ Environment=RUST_LOG=ocrd=info,ocr_core=info
 Environment=OAR_HOME=%h/.oar
 Restart=on-failure
 RestartSec=2
-# The socket lives in $XDG_RUNTIME_DIR; nothing to clean on stop.
+# The daemon removes its socket on stop / SIGTERM / SIGINT.
 
 [Install]
 WantedBy=graphical-session.target
