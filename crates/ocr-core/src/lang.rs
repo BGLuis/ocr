@@ -35,18 +35,49 @@ impl Candidate {
     }
 }
 
+/// Returns true if the character is Han, Kana, or Hangul.
+pub fn is_cjk_char(c: char) -> bool {
+    matches!(
+        c,
+        // CJK Unified Ideographs & Extension A
+        '\u{4e00}'..='\u{9fff}'
+            | '\u{3400}'..='\u{4dbf}'
+            | '\u{20000}'..='\u{2ebef}'
+            | '\u{30000}'..='\u{3134f}'
+            | '\u{f900}'..='\u{faff}'
+            // Hiragana & Katakana
+            | '\u{3040}'..='\u{309f}'
+            | '\u{30a0}'..='\u{30ff}'
+            | '\u{31f0}'..='\u{31ff}'
+            | '\u{ff65}'..='\u{ff9f}'
+            // Hangul Syllables & Jamo
+            | '\u{ac00}'..='\u{d7af}'
+            | '\u{1100}'..='\u{11ff}'
+            | '\u{3130}'..='\u{318f}'
+            | '\u{a960}'..='\u{a97f}'
+            | '\u{d7b0}'..='\u{d7ff}'
+    )
+}
+
+/// Returns true if text contains at least one Han, Kana, or Hangul character.
+pub fn has_cjk_char(text: &str) -> bool {
+    text.chars().any(is_cjk_char)
+}
+
 /// Should the weak-box retry run for this primary confidence?
 ///
 /// Also retries when the primary produced empty text regardless of the score —
-/// a blank read is worse than a low-confidence one.
+/// a blank read is worse than a low-confidence one. Also retries if the text
+/// contains no Han, Kana, or Hangul characters, suspecting Latin text recognized
+/// without proper diacritics by the CJK recognizer.
 pub fn needs_retry(primary: &Candidate, min_confidence: f32) -> bool {
-    !primary.is_usable() || primary.confidence < min_confidence
+    !primary.is_usable() || primary.confidence < min_confidence || !has_cjk_char(&primary.text)
 }
 
 /// Choose the winning candidate for a box.
 ///
-/// * If the primary is at or above `min_confidence` and non-empty, keep it —
-///   the retries should not even have been computed.
+/// * If the primary is at or above `min_confidence` and non-empty and contains CJK characters,
+///   keep it — the retries should not even have been computed.
 /// * Otherwise take the highest-confidence **usable** (non-empty) candidate.
 /// * If nothing is usable, fall back to the primary so the box still carries
 ///   its (low) score downstream.
@@ -57,7 +88,7 @@ pub fn pick<'a>(
     retries: &'a [Candidate],
     min_confidence: f32,
 ) -> &'a Candidate {
-    if primary.is_usable() && primary.confidence >= min_confidence {
+    if primary.is_usable() && primary.confidence >= min_confidence && has_cjk_char(&primary.text) {
         return primary;
     }
 
@@ -91,6 +122,16 @@ mod tests {
 
     fn c(r: Recognizer, t: &str, conf: f32) -> Candidate {
         Candidate::new(r, t, conf)
+    }
+
+    #[test]
+    fn latin_text_triggers_retry_and_wins_over_cjk() {
+        let primary = c(Recognizer::Cjk, "açǎo", 0.87);
+        assert!(needs_retry(&primary, DEFAULT_MIN_CONFIDENCE));
+        let retries = [c(Recognizer::Latin, "ação", 0.98)];
+        let w = pick(&primary, &retries, DEFAULT_MIN_CONFIDENCE);
+        assert_eq!(w.recognizer, Recognizer::Latin);
+        assert_eq!(w.text, "ação");
     }
 
     #[test]
