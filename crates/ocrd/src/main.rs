@@ -23,7 +23,7 @@ use ocr_proto::{default_socket_path, Accel, Line, Ocr, Request, Response};
 struct Args {
     /// Accelerator. auto = try CUDA then CPU. cpu = force. The rest require that
     /// provider (fatal if absent, no fallback) and the matching build feature:
-    /// cuda (NVIDIA), openvino (Intel GPU), webgpu (AMD on Linux), directml (Windows).
+    /// cuda (NVIDIA), openvino (Intel GPU), webgpu (requires Dawn), directml (Windows).
     #[arg(long, default_value = "auto")]
     accel: String,
 

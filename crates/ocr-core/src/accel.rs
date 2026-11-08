@@ -8,8 +8,8 @@
 //! Vendors:
 //! * **NVIDIA** — `cuda` feature, `--accel cuda` (or `auto`).
 //! * **Intel** (iGPU / Arc / NPU) — `openvino` feature, `--accel openvino`.
-//! * **AMD on Linux** — `webgpu` feature, `--accel webgpu` (vendor-neutral via
-//!   Vulkan; ROCm is not wired through the pipeline library).
+//! * **AMD on Linux** — no prebuilt path; CPU only (WebGPU requires an ONNX Runtime
+//!   compiled with Dawn; ROCm is not wired through the pipeline library).
 //! * **Windows, any vendor** — `directml` feature, `--accel directml`.
 //!
 //! `auto` only ever tries CUDA then CPU — it never silently reaches for a vendor
@@ -154,7 +154,7 @@ pub fn plan(requested: Accel, device_id: i32) -> Result<Plan> {
             Ok(()) => Ok(Plan::cuda(device_id, "--accel auto: CUDA probe passed")),
             Err(why) => Ok(Plan::cpu(format!(
                 "--accel auto: CUDA unavailable ({why}); using CPU. \
-                 Intel GPU: --accel openvino. AMD GPU: --accel webgpu."
+                 Intel GPU: --accel openvino. AMD GPU: no prebuilt path; CPU only."
             ))),
         },
     }
@@ -353,8 +353,10 @@ mod tests {
             let p = plan(Accel::Auto, 0).unwrap();
             assert_eq!(p.effective, Effective::Cpu);
             assert!(p.note.contains("CUDA unavailable"));
-            // The fallback note points Intel/AMD users at their flag.
-            assert!(p.note.contains("openvino") && p.note.contains("webgpu"));
+            assert!(p.note.contains("openvino"));
+            if probe_webgpu().is_err() {
+                assert!(!p.note.contains("--accel webgpu"));
+            }
         }
     }
 
